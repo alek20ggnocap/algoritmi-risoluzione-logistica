@@ -5,10 +5,14 @@
     let sommeColonne: number[] = [];
     let sommaTotale: number = 0;
 
+    let rigaTemp : number | null = null;
+    let colonnaTemp: number | null = null;
+    $: riga = rigaTemp;
+    $: colonna = colonnaTemp; 
     function randomizeValues() {
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; riga != null && i < riga; i++) {
             tabella[i] = [];
-            for (let j = 0; j < 5; j++) {
+            for (let j = 0; colonna != null && j < colonna; j++) {
                 tabella[i][j] = Math.floor(Math.random() * 100);
             }
         }
@@ -48,17 +52,24 @@
     </nav>
 
     <!-- CONTENUTO PRINCIPALE -->
-    <div class="flex-1 flex flex-col items-center justify-start p-6 overflow-y-auto">
+    <div class="flex-1 flex flex-col items-center justify-start p-6 overflow-x-auto overflow-y-auto">
         {#if finsetraAttiva === "home"}
             <div class="flex flex-col items-center mt-6 space-y-6">
-                <button
-                    class="bg-amber-500 text-white font-semibold px-6 py-2 rounded-lg shadow hover:bg-amber-600 transition-all"
-                    on:click={() => {randomizeValues(); calcolaSomme();}}>
-                    Genera Valori Casuali
-                </button>
+                <div class="text-center items-center flex row">
+                    <p class="p-4">righe</p>
+                    <input type="number" placeholder="n-row" class="w-24 text-center mr-4 p-2 border border-amber-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400" bind:value={riga} />
+                    <p class="p-4">colonne</p>
+                    <input type="number" placeholder="n-col" class="w-24 text-center mr-4 p-2 border border-amber-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400" bind:value={colonna} />
+                    <button
+                        class="bg-amber-500 text-white font-semibold px-6 py-2 rounded-lg shadow hover:bg-amber-600 transition-all"
+                        on:click={() => {randomizeValues(); calcolaSomme();}}>
+                        Genera Valori Casuali
+                    </button>
+                </div>
+                
 
                 {#if tabella.length > 0}
-                    <div class="overflow-x-auto">
+                    <div class="">
                         <table class="border-collapse border border-amber-400 shadow-lg rounded-lg text-center">
                             <thead class="bg-amber-200">
                                 <tr>
