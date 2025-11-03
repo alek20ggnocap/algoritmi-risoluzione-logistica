@@ -1,30 +1,90 @@
 <script lang="ts">
     let finsetraAttiva = "home";
     const tabella: number[][] = [];
-    let sommeRighe: number[] = [];
-    let sommeColonne: number[] = [];
+    let produzioni: number[] = [];
+    let richieste: number[] = [];
     let sommaTotale: number = 0;
 
+    // DICHIARAZIONE CORRETTA di riga e colonna (usate nel bind)
     let rigaTemp : number | null = null;
     let colonnaTemp: number | null = null;
+    let riga: number | null = null;
+    let colonna: number | null = null;
     $: riga = rigaTemp;
-    $: colonna = colonnaTemp; 
+    $: colonna = colonnaTemp;
+
+    function generaProduzioniERichieste(righe: number, colonne: number) {
+        // Genera produzioni casuali
+        produzioni = Array.from({ length: righe }, () => Math.floor(Math.random() * 400) + 100);
+        const sommaProduzioni = produzioni.reduce((a, b) => a + b, 0);
+
+        // Genera richieste come percentuali casuali della sommaProduzioni
+        const pesi = Array.from({ length: colonne }, () => Math.random());
+        const sommaPesi = pesi.reduce((a, b) => a + b, 0);
+
+        richieste = pesi.map(p => Math.round((p / sommaPesi) * sommaProduzioni));
+
+        // correzione minima per bilanciare eventuale arrotondamento
+        const diff = sommaProduzioni - richieste.reduce((a, b) => a + b, 0);
+        if (diff !== 0) richieste[richieste.length - 1] += diff;
+
+        sommaTotale = sommaProduzioni;
+    }
+
     function randomizeValues() {
-        for (let i = 0; riga != null && i < riga; i++) {
+        // pulisco la tabella precedente
+        tabella.length = 0;
+        if (!riga || !colonna) return;
+        for (let i = 0; i < riga; i++) {
             tabella[i] = [];
-            for (let j = 0; colonna != null && j < colonna; j++) {
+            for (let j = 0; j < colonna; j++) {
                 tabella[i][j] = Math.floor(Math.random() * 100);
             }
         }
-        console.log(tabella);
+        for (let k = 0; k < colonna; k++) {
+            richieste[k] = 0;
+        }
+        for (let l = 0; l < riga; l++) {
+            produzioni[l] = 0;
+        }
+        generaProduzioniERichieste(riga, colonna);
+        calcolaSomme();
     }
 
-    async function calcolaSomme() {
-        sommeRighe = tabella.map(riga => riga.reduce((a, b) => a + b, 0));
-        sommeColonne = tabella[0].map((_, colIndex) => tabella.reduce((sum, row) => sum + row[colIndex], 0));
-        sommaTotale = sommeRighe.reduce((a, b) => a + b, 0);
+    // funzione che aggiorna una singola cella (da collegare all'input)
+    function onCellInput(i: number, j: number, raw: string) {
+        const num = raw === '' ? 0 : Number(raw);
+        // assicurati che la riga esista
+        if (!tabella[i]) tabella[i] = [];
+        tabella[i][j] = isNaN(num) ? 0 : num;
+        calcolaSomme();
+    }
+
+    function algoritmoNordOvest() {
+        // Implementazione dell'algoritmo del Nord-Ovest
+    }
+    function algoritmoMinimiCosti() {
+        // Implementazione dell'algoritmo dei Minimi Costi
+    }
+    function algoritmoNordOvestStep() {
+
+    }
+    function algoritmoMinimiCostiStep() {}
+
+    function calcolaSomme() {
+        if (tabella.length === 0) {
+            richieste = [];
+            produzioni = [];
+            sommaTotale = 0;
+            return;
+        }
+
+        richieste.forEach(element => {
+            sommaTotale = richieste.reduce((a, b) => a + b, 0);
+        });
     }
 </script>
+
 
 <div class="flex flex-col h-screen w-full bg-amber-50 text-gray-900">
     <!-- HEADER -->
@@ -52,67 +112,93 @@
     </nav>
 
     <!-- CONTENUTO PRINCIPALE -->
-    <div class="flex-1 flex flex-col items-center justify-start p-6 overflow-x-auto overflow-y-auto">
+    <div class="flex-1 flex flex-col justify-start p-6 overflow-y-auto">
         {#if finsetraAttiva === "home"}
-            <div class="flex flex-col items-center mt-6 space-y-6">
-                <div class="text-center items-center flex row">
-                    <p class="p-4">righe</p>
-                    <input type="number" placeholder="n-row" class="w-24 text-center mr-4 p-2 border border-amber-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400" bind:value={riga} />
-                    <p class="p-4">colonne</p>
-                    <input type="number" placeholder="n-col" class="w-24 text-center mr-4 p-2 border border-amber-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400" bind:value={colonna} />
+            <div class="flex flex-col mt-6 space-y-6">
+
+                <div class="flex flex-wrap items-center justify-center gap-4">
+                    <div class="flex items-center">
+                        <p class="p-2">righe</p>
+                        <input type="number" min="0" placeholder="n-row" class="w-24 text-center mr-4 p-2 border border-amber-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400" bind:value={riga} />
+                    </div>
+                    <div class="flex items-center">
+                        <p class="p-2">colonne</p>
+                        <input type="number" min="0" placeholder="n-col" class="w-24 text-center mr-4 p-2 border border-amber-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400" bind:value={colonna} />
+                    </div>
                     <button
                         class="bg-amber-500 text-white font-semibold px-6 py-2 rounded-lg shadow hover:bg-amber-600 transition-all"
-                        on:click={() => {randomizeValues(); calcolaSomme();}}>
+                        on:click={randomizeValues}>
                         Genera Valori Casuali
                     </button>
+                    {#if tabella.length <= 0}
+                        <p class="text-gray-600 justify-center italic">Clicca il pulsante per generare la tabella.</p>
+                    {/if}
                 </div>
-                
 
                 {#if tabella.length > 0}
-                    <div class="">
-                        <table class="border-collapse border border-amber-400 shadow-lg rounded-lg text-center">
-                            <thead class="bg-amber-200">
+                    <!-- WRAPPER SCROLLABILE ORIZZONTALE: IMPORTANTISSIMO -->
+                    <div class="w-full overflow-auto border border-amber-200 rounded-lg p-2">
+                        <!-- assicuriamoci che la tabella non venga compressa: min-w-max -->
+                        <table class="border-collapse table-auto min-w-max text-center">
+                            <thead class="bg-amber-200 sticky top-0">
                                 <tr>
                                     <th class="border border-amber-400 w-24 bg-amber-300"></th>
                                     {#each tabella[0] as _, j}
                                         <th class="border border-amber-400 px-4 py-2 font-semibold">D{j + 1}</th>
                                     {/each}
-                                    <th class="border border-amber-400 px-4 py-2 font-semibold bg-amber-300">Σ Riga</th>
+                                    <th class="border border-amber-400 px-4 py-2 font-semibold bg-amber-300">Produzione</th>
                                 </tr>
                             </thead>
+
                             <tbody>
                                 {#each tabella as row, i}
                                     <tr class="hover:bg-amber-50">
                                         <th class="border border-amber-400 px-4 py-2 bg-amber-100 font-semibold">UP{i + 1}</th>
-                                        {#each row as value}
-                                            <td class="border border-amber-400">
+                                        {#each row as value, j}
+                                            <td class="border border-amber-400 px-1 py-1">
                                                 <input
                                                     type="number"
-                                                    class="[&::-webkit-inner-spin-button]:appearance-none w-16 text-center bg-transparent focus:outline-none focus:ring-1 focus:ring-amber-400 rounded"
-                                                    bind:value={value}
-                                                    on:input={calcolaSomme}
+                                                    inputmode="numeric"
+                                                    class="[&::-webkit-inner-spin-button]:appearance-none w-20 text-center bg-transparent focus:outline-none focus:ring-1 focus:ring-amber-400 rounded"
+                                                    bind:value={tabella[i][j]}
+                                                    on:input={(e: Event) => onCellInput(i, j, (e.target as HTMLInputElement).value)}
+
                                                 />
                                             </td>
                                         {/each}
-                                        <td class="border border-amber-400 bg-amber-100 font-semibold text-sm">
-                                            {sommeRighe[i]}
+                                        <td class="border border-amber-400 bg-amber-100 font-semibold text-sm px-4 py-2">
+                                            <input
+                                                type="number"
+                                                inputmode="numeric"
+                                                class="[&::-webkit-inner-spin-button]:appearance-none w-20 text-center bg-transparent focus:outline-none focus:ring-1 focus:ring-amber-400 rounded"
+                                                bind:value={produzioni[i]}
+                                                on:input={() => calcolaSomme()}
+                                            />
                                         </td>
                                     </tr>
                                 {/each}
                             </tbody>
+
                             <tfoot class="bg-amber-200 font-semibold">
                                 <tr>
-                                    <th class="border border-amber-400 bg-amber-300">Σ Colonne</th>
-                                    {#each sommeColonne as somma}
-                                        <td class="border px-4 py-2 border-amber-400">{somma}</td>
+                                    <th class="border border-amber-400 bg-amber-300">Richieste</th>
+                                    {#each tabella[0] as _, j}
+                                        <td class="border border-amber-400 px-2 py-2">
+                                            <input
+                                                type="number"
+                                                inputmode="numeric"
+                                                class="[&::-webkit-inner-spin-button]:appearance-none w-20 text-center bg-transparent focus:outline-none focus:ring-1 focus:ring-amber-400 rounded"
+                                                bind:value={richieste[j]}
+                                                on:input={() => calcolaSomme()}
+                                            />
+                                        </td>
                                     {/each}
                                     <td class="border px-4 py-2 border-amber-400 bg-amber-300 font-bold">{sommaTotale}</td>
                                 </tr>
                             </tfoot>
                         </table>
+
                     </div>
-                {:else}
-                    <p class="text-gray-600 italic">Clicca il pulsante per generare la tabella.</p>
                 {/if}
             </div>
         {/if}
@@ -138,6 +224,7 @@
             </p>
         {/if}
     </div>
+
 
     <!-- FOOTER -->
     <footer class="h-[5%] bg-amber-600 flex items-center justify-center text-white text-sm">
