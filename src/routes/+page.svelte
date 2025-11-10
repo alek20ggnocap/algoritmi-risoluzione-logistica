@@ -1,11 +1,23 @@
 <script lang="ts">
     let finsetraAttiva = "home";
     const tabella: number[][] = [];
+    const tabellaNO: number[][] = [];
+    const tabellaMC: number[][] = [];
+    const stepsNO: number[][][] = [];
+    const stepsMC: number[][][] = [];
+    let totaleCostiNO: number = 0;
+    let totaleCostiMC: number = 0;
+    let produzioniNO: number[] = [];
+    let richiesteNO: number[] = [];
+    let produzioniMC: number[] = [];
+    let richiesteMC: number[] = [];
     let produzioni: number[] = [];
     let richieste: number[] = [];
     let sommaTotale: number = 0;
+    let sommaProduzioni: number = 0;
+    let sommaRichieste: number = 0;
+    let isBalanced: boolean = true;
 
-    // DICHIARAZIONE CORRETTA di riga e colonna (usate nel bind)
     let rigaTemp : number | null = null;
     let colonnaTemp: number | null = null;
     let riga: number | null = null;
@@ -14,25 +26,47 @@
     $: colonna = colonnaTemp;
 
     function generaProduzioniERichieste(righe: number, colonne: number) {
-        // Genera produzioni casuali
         produzioni = Array.from({ length: righe }, () => Math.floor(Math.random() * 400) + 100);
-        const sommaProduzioni = produzioni.reduce((a, b) => a + b, 0);
+        const sommaProduzioniGen = produzioni.reduce((a, b) => a + b, 0);
 
-        // Genera richieste come percentuali casuali della sommaProduzioni
         const pesi = Array.from({ length: colonne }, () => Math.random());
         const sommaPesi = pesi.reduce((a, b) => a + b, 0);
 
-        richieste = pesi.map(p => Math.round((p / sommaPesi) * sommaProduzioni));
+        richieste = pesi.map(p => Math.round((p / sommaPesi) * sommaProduzioniGen));
 
-        // correzione minima per bilanciare eventuale arrotondamento
-        const diff = sommaProduzioni - richieste.reduce((a, b) => a + b, 0);
+        const diff = sommaProduzioniGen - richieste.reduce((a, b) => a + b, 0);
         if (diff !== 0) richieste[richieste.length - 1] += diff;
 
-        sommaTotale = sommaProduzioni;
+        calcolaSomme();
+    }
+
+    function setTabelle(){
+        tabellaNO.length = 0;
+        tabellaMC.length = 0;
+        if (!riga || !colonna) return;
+        for (let i = 0; i < riga; i++) {
+            tabellaNO[i] = [];
+            tabellaMC[i] = [];
+            for (let j = 0; j < colonna; j++) {
+                tabellaNO[i][j] = tabella[i][j];
+                tabellaMC[i][j] = tabella[i][j];
+            }
+        }
+        for (let i = 0; i < riga; i++) {
+            for (let j = 0; j < colonna; j++) {
+                tabellaNO[i][j] = tabella[i][j];
+                tabellaMC[i][j] = tabella[i][j];
+                stepsNO[0][i][j] = tabella[i][j];
+                stepsMC[0][i][j] = tabella[i][j];
+            }
+        }
+        richiesteMC = [...richieste];
+        produzioniMC = [...produzioni];
+        richiesteNO = [...richieste];
+        produzioniNO = [...produzioni];
     }
 
     function randomizeValues() {
-        // pulisco la tabella precedente
         tabella.length = 0;
         if (!riga || !colonna) return;
         for (let i = 0; i < riga; i++) {
@@ -48,13 +82,10 @@
             produzioni[l] = 0;
         }
         generaProduzioniERichieste(riga, colonna);
-        calcolaSomme();
     }
 
-    // funzione che aggiorna una singola cella (da collegare all'input)
     function onCellInput(i: number, j: number, raw: string) {
         const num = raw === '' ? 0 : Number(raw);
-        // assicurati che la riga esista
         if (!tabella[i]) tabella[i] = [];
         tabella[i][j] = isNaN(num) ? 0 : num;
         calcolaSomme();
@@ -63,28 +94,55 @@
     function algoritmoNordOvest() {
         // Implementazione dell'algoritmo del Nord-Ovest
     }
+    
     function algoritmoMinimiCosti() {
         // Implementazione dell'algoritmo dei Minimi Costi
     }
+    
     function algoritmoNordOvestStep() {
-
+        if (tabella.length === 0) return;
+        if (!isBalanced) return;
+        if (richiesteNO[0] === produzioniNO[0]) {
+            totaleCostiNO += tabellaNO[0][0]*richiesteNO[0];
+            richiesteNO.shift();
+            produzioniNO.shift();
+        } else
+        if (richiesteNO[0] < produzioniNO[0]) {
+            totaleCostiNO += tabellaNO[0][0]*richiesteNO[0];
+            produzioniNO[0] -= richiesteNO[0];
+            richiesteNO.shift();
+            tabellaNO.shift();
+        }else {
+            totaleCostiNO += tabellaNO[0][0]*produzioniNO[0];
+            richiesteNO[0] -= produzioniNO[0];
+            produzioniNO.shift();
+            tabellaNO.forEach(riga => {
+                
+            });       
+        }
     }
-    function algoritmoMinimiCostiStep() {}
+    
+    function algoritmoMinimiCostiStep() {
+        // Implementazione step by step
+    }
 
     function calcolaSomme() {
         if (tabella.length === 0) {
             richieste = [];
             produzioni = [];
             sommaTotale = 0;
+            sommaProduzioni = 0;
+            sommaRichieste = 0;
+            isBalanced = true;
             return;
         }
 
-        richieste.forEach(element => {
-            sommaTotale = richieste.reduce((a, b) => a + b, 0);
-        });
+        sommaProduzioni = produzioni.reduce((a, b) => a + b, 0);
+        sommaRichieste = richieste.reduce((a, b) => a + b, 0);
+        isBalanced = sommaProduzioni === sommaRichieste;
+        sommaTotale = sommaProduzioni;
     }
 </script>
-
 
 <div class="flex flex-col h-screen w-full bg-amber-50 text-gray-900">
     <!-- HEADER -->
@@ -105,7 +163,7 @@
                 {finsetraAttiva === tab.key
                     ? 'bg-amber-200 text-gray-900 shadow-inner'
                     : 'bg-amber-100 hover:bg-amber-200'}"
-                on:click={() => finsetraAttiva = tab.key}>
+                on:click={() => {finsetraAttiva = tab.key; setTabelle();}}>
                 {tab.name}
             </button>
         {/each}
@@ -135,10 +193,38 @@
                     {/if}
                 </div>
 
+                <!-- AVVISO DI SBILANCIAMENTO -->
+                {#if tabella.length > 0 && !isBalanced}
+                    <div class="bg-red-300 border-l-4 border-red-500 text-red-950 p-4 rounded-lg shadow-md">
+                        <div class="flex items-center">
+                            <svg class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                            </svg>
+                            <div>
+                                <p class="font-bold">Attenzione: Tabella Sbilanciata!</p>
+                                <p class="text-sm">Somma Produzioni: <span class="font-semibold">{sommaProduzioni}</span> | Somma Richieste: <span class="font-semibold">{sommaRichieste}</span> | Differenza: <span class="font-semibold">{Math.abs(sommaProduzioni - sommaRichieste)}</span></p>
+                            </div>
+                        </div>
+                    </div>
+                {/if}
+
+                <!-- CONFERMA DI BILANCIAMENTO -->
+                {#if tabella.length > 0 && isBalanced}
+                    <div class="bg-green-300 border-l-4 border-green-500 text-green-950 p-4 rounded-lg shadow-md">
+                        <div class="flex items-center">
+                            <svg class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                            </svg>
+                            <div>
+                                <p class="font-bold">✓ Tabella Bilanciata</p>
+                                <p class="text-sm">Somma Produzioni = Somma Richieste = <span class="font-semibold">{sommaTotale}</span></p>
+                            </div>
+                        </div>
+                    </div>
+                {/if}
+
                 {#if tabella.length > 0}
-                    <!-- WRAPPER SCROLLABILE ORIZZONTALE: IMPORTANTISSIMO -->
                     <div class="w-full overflow-auto border border-amber-200 rounded-lg p-2">
-                        <!-- assicuriamoci che la tabella non venga compressa: min-w-max -->
                         <table class="border-collapse table-auto min-w-max text-center">
                             <thead class="bg-amber-200 sticky top-0">
                                 <tr>
@@ -162,7 +248,6 @@
                                                     class="[&::-webkit-inner-spin-button]:appearance-none w-20 text-center bg-transparent focus:outline-none focus:ring-1 focus:ring-amber-400 rounded"
                                                     bind:value={tabella[i][j]}
                                                     on:input={(e: Event) => onCellInput(i, j, (e.target as HTMLInputElement).value)}
-
                                                 />
                                             </td>
                                         {/each}
@@ -193,11 +278,17 @@
                                             />
                                         </td>
                                     {/each}
-                                    <td class="border px-4 py-2 border-amber-400 bg-amber-300 font-bold">{sommaTotale}</td>
+                                    <td class="border px-4 py-2 border-amber-400 font-bold transition-all duration-300
+                                        {isBalanced ? 'bg-green-300 text-green-950' : 'bg-red-300 text-red-950'}">
+                                        {#if isBalanced}
+                                            {sommaTotale}
+                                        {:else}
+                                            {sommaProduzioni} ≠ {sommaRichieste}
+                                        {/if}
+                                    </td>
                                 </tr>
                             </tfoot>
                         </table>
-
                     </div>
                 {/if}
             </div>
@@ -224,7 +315,6 @@
             </p>
         {/if}
     </div>
-
 
     <!-- FOOTER -->
     <footer class="h-[5%] bg-amber-600 flex items-center justify-center text-white text-sm">
