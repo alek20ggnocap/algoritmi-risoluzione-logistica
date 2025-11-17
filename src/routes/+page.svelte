@@ -1,10 +1,10 @@
 <script lang="ts">
     let finsetraAttiva = "home";
-    const tabella: number[][] = [];
-    const tabellaNO: number[][] = [];
-    const tabellaMC: number[][] = [];
-    const stepsNO: number[][][] = [];
-    const stepsMC: number[][][] = [];
+    let tabella: number[][] = [];
+    let tabellaNO: number[][] = [];
+    let tabellaMC: number[][] = [];
+    let stepsNO: number[][][] = [];
+    let stepsMC: number[][][] = [];
     let totaleCostiNO: number = 0;
     let totaleCostiMC: number = 0;
     let produzioniNO: number[] = [];
@@ -17,13 +17,10 @@
     let sommaProduzioni: number = 0;
     let sommaRichieste: number = 0;
     let isBalanced: boolean = true;
-
-    let rigaTemp : number | null = null;
-    let colonnaTemp: number | null = null;
     let riga: number | null = null;
     let colonna: number | null = null;
-    $: riga = rigaTemp;
-    $: colonna = colonnaTemp;
+    $: riga = null;
+    $: colonna = null;
 
     function generaProduzioniERichieste(righe: number, colonne: number) {
         produzioni = Array.from({ length: righe }, () => Math.floor(Math.random() * 400) + 100);
@@ -41,34 +38,31 @@
     }
 
     function setTabelle(){
-        tabellaNO.length = 0;
-        tabellaMC.length = 0;
-        if (!riga || !colonna) return;
-        for (let i = 0; i < riga; i++) {
-            tabellaNO[i] = [];
-            tabellaMC[i] = [];
-            for (let j = 0; j < colonna; j++) {
-                tabellaNO[i][j] = tabella[i][j];
-                tabellaMC[i][j] = tabella[i][j];
-            }
-        }
-        for (let i = 0; i < riga; i++) {
-            for (let j = 0; j < colonna; j++) {
-                tabellaNO[i][j] = tabella[i][j];
-                tabellaMC[i][j] = tabella[i][j];
-                stepsNO[0][i][j] = tabella[i][j];
-                stepsMC[0][i][j] = tabella[i][j];
-            }
-        }
-        richiesteMC = [...richieste];
-        produzioniMC = [...produzioni];
-        richiesteNO = [...richieste];
-        produzioniNO = [...produzioni];
+    if (riga === null || colonna === null) return;
+    if (tabella.length === 0) return;
+    
+    // Copia la tabella
+    tabellaNO = [];
+    tabellaMC = [];
+    for (let i = 0; i < tabella.length; i++) {
+        tabellaNO[i] = [...tabella[i]];
+        tabellaMC[i] = [...tabella[i]];
     }
+    
+    // Copia produzioni e richieste
+    produzioniNO = [...produzioni];
+    richiesteNO = [...richieste];
+    produzioniMC = [...produzioni];
+    richiesteMC = [...richieste];
+    
+    // Reset totali
+    totaleCostiNO = 0;
+    totaleCostiMC = 0;
+}
 
     function randomizeValues() {
         tabella.length = 0;
-        if (!riga || !colonna) return;
+        if (riga === null || colonna === null) return;
         for (let i = 0; i < riga; i++) {
             tabella[i] = [];
             for (let j = 0; j < colonna; j++) {
@@ -92,7 +86,9 @@
     }
 
     function algoritmoNordOvest() {
-        // Implementazione dell'algoritmo del Nord-Ovest
+        while (richiesteNO.length > 0 && produzioniNO.length > 0) {
+            algoritmoNordOvestStep();
+        }
     }
     
     function algoritmoMinimiCosti() {
@@ -100,25 +96,27 @@
     }
     
     function algoritmoNordOvestStep() {
-        if (tabella.length === 0) return;
+        if (tabellaNO.length === 0) return;
         if (!isBalanced) return;
+        if (richiesteNO.length === 0 || produzioniNO.length === 0) return;
+        
         if (richiesteNO[0] === produzioniNO[0]) {
-            totaleCostiNO += tabellaNO[0][0]*richiesteNO[0];
-            richiesteNO.shift();
-            produzioniNO.shift();
-        } else
-        if (richiesteNO[0] < produzioniNO[0]) {
-            totaleCostiNO += tabellaNO[0][0]*richiesteNO[0];
+            totaleCostiNO += tabellaNO[0][0] * richiesteNO[0];
+            richiesteNO = richiesteNO.slice(1);  // Usa slice invece di shift
+            produzioniNO = produzioniNO.slice(1);
+            tabellaNO = tabellaNO.slice(1);  // Rimuove la prima riga
+        } else if (richiesteNO[0] < produzioniNO[0]) {
+            totaleCostiNO += tabellaNO[0][0] * richiesteNO[0];
             produzioniNO[0] -= richiesteNO[0];
-            richiesteNO.shift();
-            tabellaNO.shift();
-        }else {
-            totaleCostiNO += tabellaNO[0][0]*produzioniNO[0];
+            produzioniNO = [...produzioniNO];  // Forza reattività
+            richiesteNO = richiesteNO.slice(1);
+            tabellaNO = tabellaNO.slice(1);  // Rimuove la prima riga
+        } else {
+            totaleCostiNO += tabellaNO[0][0] * produzioniNO[0];
             richiesteNO[0] -= produzioniNO[0];
-            produzioniNO.shift();
-            tabellaNO.forEach(riga => {
-                
-            });       
+            richiesteNO = [...richiesteNO];  // Forza reattività
+            produzioniNO = produzioniNO.slice(1);
+            tabellaNO = tabellaNO.map(riga => riga.slice(1));  // Rimuove la prima colonna da ogni riga
         }
     }
     
@@ -295,10 +293,122 @@
         {/if}
 
         {#if finsetraAttiva === "algoritmo nord ovest"}
-            <h1 class="text-3xl font-bold mt-10 text-amber-700">Algoritmo del Nord-Ovest</h1>
-            <p class="mt-4 text-gray-700 text-center max-w-xl">
-                Qui potrai visualizzare e calcolare il piano iniziale di trasporto secondo il metodo del Nord-Ovest.
-            </p>
+            <div class="flex flex-col mt-6 space-y-6">
+                
+                <!-- AVVISO DI SBILANCIAMENTO -->
+                {#if tabellaNO.length > 0 && !isBalanced}
+                    <div class="bg-red-300 border-l-4 border-red-500 text-red-950 p-4 rounded-lg shadow-md">
+                        <div class="flex items-center">
+                            <svg class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                            </svg>
+                            <div>
+                                <p class="font-bold">Attenzione: Tabella Sbilanciata!</p>
+                                <p class="text-sm">Somma Produzioni: <span class="font-semibold">{sommaProduzioni}</span> | Somma Richieste: <span class="font-semibold">{sommaRichieste}</span> | Differenza: <span class="font-semibold">{Math.abs(sommaProduzioni - sommaRichieste)}</span></p>
+                            </div>
+                        </div>
+                    </div>
+                {/if}
+
+                <!-- CONFERMA DI BILANCIAMENTO -->
+                {#if tabellaNO.length > 0 && isBalanced}
+                    <div class="bg-green-300 border-l-4 border-green-500 text-green-950 p-4 rounded-lg shadow-md">
+                        <div class="flex items-center">
+                            <svg class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                            </svg>
+                            <div>
+                                <p class="font-bold">✓ Tabella Bilanciata</p>
+                                <p class="text-sm">Somma Produzioni = Somma Richieste = <span class="font-semibold">{sommaTotale}</span></p>
+                            </div>
+                        </div>
+                    </div>
+                {/if}
+
+                {#if tabellaNO.length > 0}
+                    <div class="w-full overflow-auto border border-amber-200 rounded-lg p-2">
+                        <table class="border-collapse table-auto min-w-max text-center">
+                            <thead class="bg-amber-200 sticky top-0">
+                                <tr>
+                                    <th class="border border-amber-400 w-24 bg-amber-300"></th>
+                                    {#each tabellaNO[0] as _, j}
+                                        <th class="border border-amber-400 px-4 py-2 font-semibold">D{j + 1}</th>
+                                    {/each}
+                                    <th class="border border-amber-400 px-4 py-2 font-semibold bg-amber-300">Produzione</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                {#each tabellaNO as row, i}
+                                    <tr class="hover:bg-amber-50">
+                                        <th class="border border-amber-400 px-4 py-2 bg-amber-100 font-semibold">UP{i + 1}</th>
+                                        {#each row as value, j}
+                                            <td class="border border-amber-400 px-1 py-1">
+                                                <input
+                                                    readonly
+                                                    type="number"
+                                                    inputmode="numeric"
+                                                    class="[&::-webkit-inner-spin-button]:appearance-none w-20 text-center bg-transparent focus:outline-none focus:ring-1 focus:ring-amber-400 rounded"
+                                                    bind:value={tabellaNO[i][j]}
+                                                />
+                                            </td>
+                                        {/each}
+                                        <td class="border border-amber-400 bg-amber-100 font-semibold text-sm px-4 py-2">
+                                            <input
+                                                readonly
+                                                type="number"
+                                                inputmode="numeric"
+                                                class="[&::-webkit-inner-spin-button]:appearance-none w-20 text-center bg-transparent focus:outline-none focus:ring-1 focus:ring-amber-400 rounded"
+                                                bind:value={produzioniNO[i]}
+                                            />
+                                        </td>
+                                    </tr>
+                                {/each}
+                            </tbody>
+
+                            <tfoot class="bg-amber-200 font-semibold">
+                                <tr>
+                                    <th class="border border-amber-400 bg-amber-300">Richieste</th>
+                                    {#each tabellaNO[0] as _, j}
+                                        <td class="border border-amber-400 px-2 py-2">
+                                            <input
+                                                readonly
+                                                type="number"
+                                                inputmode="numeric"
+                                                class="[&::-webkit-inner-spin-button]:appearance-none w-20 text-center bg-transparent focus:outline-none focus:ring-1 focus:ring-amber-400 rounded"
+                                                bind:value={richiesteNO[j]}
+                                            />
+                                        </td>
+                                    {/each}
+                                    <td class="border px-4 py-2 border-amber-400 font-bold transition-all duration-300
+                                        {isBalanced ? 'bg-green-300 text-green-950' : 'bg-red-300 text-red-950'}">
+                                        {#if isBalanced}
+                                            {sommaTotale}
+                                        {:else}
+                                            {sommaProduzioni} ≠ {sommaRichieste}
+                                        {/if}
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                {:else}
+                    <p class="text-gray-600 text-center italic mt-8">
+                        Genera prima una tabella nella sezione Home per visualizzare l'algoritmo Nord-Ovest.
+                    </p>
+                {/if}
+            </div>
+            <button
+                class="mt-6 bg-amber-500 text-white font-semibold px-6 py-2 rounded-lg shadow hover:bg-amber-600 transition-all"
+                on:click={algoritmoNordOvestStep}>
+                Esegui Step Algoritmo Nord-Ovest
+            </button>
+            <button
+                class="mt-6 bg-amber-500 text-white font-semibold px-6 py-2 rounded-lg shadow hover:bg-amber-600 transition-all"
+                on:click={algoritmoNordOvest}>
+                Esegui diretto Algoritmo Nord-Ovest
+            </button>
+            <p>{totaleCostiNO}</p>
         {/if}
 
         {#if finsetraAttiva === "algoritmo minimi costi"}
