@@ -242,7 +242,7 @@
     }
 
     function resetShow() {
-        if (stepsMC.length != 0)
+        if (stepsMC.length != 0 && stepsNO.length != 0)
         {
             stepsMC = [];
             tabellaMC = [];
@@ -250,9 +250,6 @@
             richiesteMC = [];
             totaleCostiMC = 0;
             stepsMC = [];
-        }
-        if (stepsNO.length != 0)
-        {
             stepsNO = [];
             tabellaNO = [];
             produzioniNO = [];
