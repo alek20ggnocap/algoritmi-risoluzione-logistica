@@ -61,8 +61,6 @@
     richiesteMC = [...richieste];
     
     // Reset totali
-    totaleCostiNO = 0;
-    totaleCostiMC = 0;
 }
 
     function randomizeValues() {
@@ -90,6 +88,20 @@
         calcolaSomme();
     }
 
+    function pushaStepNO() {
+        if (stepsNO.length === 0) {
+            stepsNO = [tabellaNO.map(r => [...r]), ...stepsNO];
+            return;
+        }
+    }
+
+    function pushaStepMC() {
+        if (stepsMC.length === 0) {
+            stepsMC = [tabellaMC.map(r => [...r]), ...stepsMC];
+            return;
+        }
+    }
+
     function algoritmoNordOvest() {
         while (richiesteNO.length > 0 && produzioniNO.length > 0) {
             algoritmoNordOvestStep();
@@ -98,27 +110,68 @@
     
     function algoritmoNordOvestStep() {
         if (tabellaNO.length === 0) return;
-        if (!isBalanced) return;
-        if (richiesteNO.length === 0 || produzioniNO.length === 0) return;
-        
-        if (richiesteNO[0] === produzioniNO[0]) {
-            totaleCostiNO += tabellaNO[0][0] * richiesteNO[0];
-            richiesteNO = richiesteNO.slice(1);  // Usa slice invece di shift
+        if (!tabellaNO[0] || tabellaNO[0].length === 0) return;
+        if (produzioniNO.length === 0 || richiesteNO.length === 0) return;
+
+        // quantità assegnata
+        const q = Math.min(produzioniNO[0], richiesteNO[0]);
+
+        // aggiorna costo
+        totaleCostiNO += tabellaNO[0][0] * q;
+
+        // aggiorna produzione/richiesta
+        produzioniNO[0] -= q;
+        richiesteNO[0] -= q;
+
+        // forziamo reattività
+        produzioniNO = [...produzioniNO];
+        richiesteNO = [...richiesteNO];
+
+        // rimozioni
+        const prodZero = produzioniNO[0] === 0;
+        const reqZero = richiesteNO[0] === 0;
+
+        if (prodZero && reqZero) {
+            // riga
+            tabellaNO = tabellaNO.slice(1);
             produzioniNO = produzioniNO.slice(1);
-            tabellaNO = tabellaNO.slice(1);  // Rimuove la prima riga
-        } else if (richiesteNO[0] < produzioniNO[0]) {
-            totaleCostiNO += tabellaNO[0][0] * richiesteNO[0];
-            produzioniNO[0] -= richiesteNO[0];
-            produzioniNO = [...produzioniNO];  // Forza reattività
+
+            // colonna
+            if (tabellaNO.length > 0) {
+                tabellaNO = tabellaNO.map(r =>
+                    r.slice(1)
+                );
+            }
             richiesteNO = richiesteNO.slice(1);
-            tabellaNO = tabellaNO.slice(1);  // Rimuove la prima riga
-        } else {
-            totaleCostiNO += tabellaNO[0][0] * produzioniNO[0];
-            richiesteNO[0] -= produzioniNO[0];
-            richiesteNO = [...richiesteNO];  // Forza reattività
+        } else if (prodZero) {
+            tabellaNO = tabellaNO.slice(1);
             produzioniNO = produzioniNO.slice(1);
-            tabellaNO = tabellaNO.map(riga => riga.slice(1));  // Rimuove la prima colonna da ogni riga
+        } else if (reqZero) {
+            tabellaNO = tabellaNO.map(r =>
+                r.slice(1)
+            );
+            richiesteNO = richiesteNO.slice(1);
         }
+
+        // pulizia col/formato
+        if (tabellaNO.length === 0 || (tabellaNO[0] && tabellaNO[0].length === 0)) {
+            tabellaNO = [];
+        } else {
+            const colCount = tabellaNO[0].length;
+            tabellaNO = tabellaNO.map(r => {
+                if (r.length > colCount) return r.slice(0, colCount);
+                if (r.length < colCount) return r.concat(Array(colCount - r.length).fill(0));
+                return r;
+            });
+        }
+
+        // forziamo reattività
+        // (tabellaNO non viene più copiato: si modifica direttamente)
+        produzioniNO = [...produzioniNO];
+        richiesteNO = [...richiesteNO];
+
+        // snapshot step (unica copia necessaria!)
+        stepsNO.push(tabellaNO.map(r => [...r]));
     }
     
     // --- Implementazione completa: esegue gli step fino a esaurire righe o colonne ---
@@ -255,7 +308,6 @@
             produzioniNO = [];
             richiesteNO = [];
             totaleCostiNO = 0;
-            stepsNO = [];
         }
         resetSteps();
     }
@@ -296,7 +348,9 @@
                 {finsetraAttiva === tab.key
                     ? 'bg-amber-200 text-gray-900 shadow-inner'
                     : 'bg-amber-100 hover:bg-amber-200'}"
-                on:click={() => {finsetraAttiva = tab.key; setTabelle(); resetShow();}}>
+                on:click={() => {finsetraAttiva = tab.key; setTabelle(); resetShow();
+                    {tab.key === "algoritmo nord ovest" ? pushaStepNO() : ''}
+                    {tab.key === "algoritmo minimi costi" ? pushaStepMC() : ''}}}>
                 {tab.name}
             </button>
         {/each}
@@ -438,36 +492,7 @@
         {#if finsetraAttiva === "algoritmo nord ovest"}
             <div class="flex flex-col mt-6 space-y-6">
                 
-                <!-- AVVISO DI SBILANCIAMENTO -->
-                {#if tabellaNO.length > 0 && !isBalanced}
-                    <div class="bg-red-300 border-l-4 border-red-500 text-red-950 p-4 rounded-lg shadow-md">
-                        <div class="flex items-center">
-                            <svg class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                            </svg>
-                            <div>
-                                <p class="font-bold">Attenzione: Tabella Sbilanciata!</p>
-                                <p class="text-sm">Somma Produzioni: <span class="font-semibold">{sommaProduzioni}</span> | Somma Richieste: <span class="font-semibold">{sommaRichieste}</span> | Differenza: <span class="font-semibold">{Math.abs(sommaProduzioni - sommaRichieste)}</span></p>
-                            </div>
-                        </div>
-                    </div>
-                {/if}
-
-                <!-- CONFERMA DI BILANCIAMENTO -->
-                {#if tabellaNO.length > 0 && isBalanced}
-                    <div class="bg-green-300 border-l-4 border-green-500 text-green-950 p-4 rounded-lg shadow-md">
-                        <div class="flex items-center">
-                            <svg class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                            </svg>
-                            <div>
-                                <p class="font-bold">✓ Tabella Bilanciata</p>
-                                <p class="text-sm">Somma Produzioni = Somma Richieste = <span class="font-semibold">{sommaTotale}</span></p>
-                            </div>
-                        </div>
-                    </div>
-                {/if}
-
+                
                 {#if tabellaNO.length > 0}
                     <div class="w-full overflow-auto border border-amber-200 rounded-lg p-2">
                         <table class="border-collapse table-auto min-w-max text-center">
@@ -557,36 +582,6 @@
         {#if finsetraAttiva === "algoritmo minimi costi"}
             <div class="flex flex-col mt-6 space-y-6">
                 
-                <!-- AVVISO DI SBILANCIAMENTO -->
-                {#if tabellaMC.length > 0 && !isBalanced}
-                    <div class="bg-red-300 border-l-4 border-red-500 text-red-950 p-4 rounded-lg shadow-md">
-                        <div class="flex items-center">
-                            <svg class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                            </svg>
-                            <div>
-                                <p class="font-bold">Attenzione: Tabella Sbilanciata!</p>
-                                <p class="text-sm">Somma Produzioni: <span class="font-semibold">{sommaProduzioni}</span> | Somma Richieste: <span class="font-semibold">{sommaRichieste}</span> | Differenza: <span class="font-semibold">{Math.abs(sommaProduzioni - sommaRichieste)}</span></p>
-                            </div>
-                        </div>
-                    </div>
-                {/if}
-
-                <!-- CONFERMA DI BILANCIAMENTO -->
-                {#if tabellaMC.length > 0 && isBalanced}
-                    <div class="bg-green-300 border-l-4 border-green-500 text-green-950 p-4 rounded-lg shadow-md">
-                        <div class="flex items-center">
-                            <svg class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                            </svg>
-                            <div>
-                                <p class="font-bold">✓ Tabella Bilanciata</p>
-                                <p class="text-sm">Somma Produzioni = Somma Richieste = <span class="font-semibold">{sommaTotale}</span></p>
-                            </div>
-                        </div>
-                    </div>
-                {/if}
-
                 {#if tabellaMC.length > 0}
                     <div class="w-full overflow-auto border border-amber-200 rounded-lg p-2">
                         <table class="border-collapse table-auto min-w-max text-center">
