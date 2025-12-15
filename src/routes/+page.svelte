@@ -581,7 +581,6 @@
 
         {#if finsetraAttiva === "algoritmo minimi costi"}
             <div class="flex flex-col mt-6 space-y-6">
-                
                 {#if tabellaMC.length > 0}
                     <div class="w-full overflow-auto border border-amber-200 rounded-lg p-2">
                         <table class="border-collapse table-auto min-w-max text-center">
